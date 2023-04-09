@@ -1,0 +1,39 @@
+plugins {
+    id 'org.jetbrains.intellij' version '1.9.0'
+    id 'java'
+}
+
+group 'com.camile'
+version '0.0.1-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.7.0'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.7.0'
+}
+
+// See https://github.com/JetBrains/gradle-intellij-plugin/
+intellij {
+    version = '2021.2'
+}
+
+sourceSets.main.java.srcDirs 'src/main/java'
+
+patchPluginXml {
+    changeNotes = """
+       FlinkSQLChecker init commit, just has sql grammar check.
+      """
+
+}
+test {
+    useJUnitPlatform()
+}
+
+publishPlugin {
+    token.set(System.getenv("ORG_GRADLE_PROJECT_intellijPublishToken"))
+}
+
+

@@ -1,0 +1,531 @@
+{
+  parserClass="com.camile.checker.FlinkSqlCheckerParser"
+  extends="com.intellij.extapi.psi.ASTWrapperPsiElement"
+
+  psiClassPrefix="FqlChecker"
+  psiImplClassSuffix="Impl"
+  psiPackage="com.camile.checker.psi"
+  psiImplPackage="com.camile.checker.psi.impl"
+
+  elementTypeHolderClass="com.camile.checker.FlinkSqlCheckerTypes"
+  elementTypeClass="com.camile.checker.FqlElementType"
+  tokenTypeClass="com.camile.checker.FqlTokenType"
+  tokens = [
+        // 空白字符，例如空格、制表符
+        //WHITE_SPACE = 'regexp:\s+'
+        COMMENT =  'regexp:--.*'
+        WHITE_SPACE2 = "regexp:[ \n\r\t\f]"
+        CHARACTER="regexp:'.'"
+        STRINGLIT='regexp:"([^"\\]|\\.)*"'
+        HYPHEN = '-'
+        UNDERSCORE = '_'
+        COMMA =','
+        PLUS ='+'
+        PERIOD ='.'
+        COLON =':'
+        ANY ='*'
+        EQUALS = '='
+        NOT_EQUALS = '<>'
+        NOT_EQUALS2 = '!='
+        GE ='>='
+        LT ='<'
+        LE ='<='
+        SEMI_COLON=';'
+        SINGLE_QUOTATION = "\'"
+        SLASH = "/"
+        LSBTRACE ='['
+        RSBTRACE = ']'
+        LBRACE='{'
+        RBRACE = '}'
+        LEFT_BRACKET = 'regexp:\('
+        RIGHT_BRACKET = 'regexp:\)'
+        ENGLISH_STRING = 'regexp:[a-zA-Z]*'
+        CHINESE_STRING = 'regexp:[\u4e00-\u9fa5]|：|，|、*'
+        NUMBER = 'regexp:[0-9]*'
+        DOUBLE = 'regexp:[0-9|.]*'
+  ]
+
+}
+
+FlinkSqlFile ::= allStatement*
+
+allStatement ::= selectStatement | queryStatement | createStatement | jarCommand | insertStatement | note
+// todo exclude all keywords
+keyWords ::=  stringFrom |'WHERE' |'AND'|'PARTITION'|'VALUES'|stringInsert|'INTO'|EQUALS|'OR'|'METADATA'| stringCreate stringTable|dataType|stringNot|
+    stringSelect |'SYSTEM_TIME'| 'for' | 'LEFT' | 'JOIN' | 'ON' | stringAs   | functionName | stringCase | stringWhen | stringElse | stringEnd | stringLike |
+     stringOrder | stringLimit | stringBy
+rawString ::=   ENGLISH_STRING | CHINESE_STRING | NUMBER | DOUBLE | HYPHEN| UNDERSCORE | COLON
+baseString ::=  (keyWords ( HYPHEN | UNDERSCORE ) (ENGLISH_STRING | NUMBER | DOUBLE | HYPHEN| UNDERSCORE|COLON) ) | !keyWords (ENGLISH_STRING | CHINESE_STRING | NUMBER | DOUBLE | HYPHEN| UNDERSCORE|COLON)
+allString ::= baseString | CHINESE_STRING
+string ::= SINGLE_QUOTATION baseString SINGLE_QUOTATION
+
+stringInsert ::= 'INSERT' | 'insert'
+stringInto ::= 'INTO' | 'into'
+stringSelect ::= 'select' | 'SELECT'
+stringFrom ::= 'from' | 'FROM'
+stringAs ::= 'as' | 'AS'
+stringNot ::= 'not' | 'NOT'
+stringLike ::= 'like' | 'LIKE'
+stringCreate ::=  'create' | 'CREATE'
+stringTable ::=  'table' | 'TABLE'
+stringGroup ::= 'group' | 'GROUP'
+stringCase ::= 'case'| 'CASE'
+stringWhen ::= 'when' | 'WHEN'
+stringThen ::= 'then' | 'THEN'
+stringElse ::= 'else' | 'ELSE'
+stringEnd ::= 'end' | 'END'
+stringBy ::= 'by' | 'BY'
+stringOrder ::= 'order' | 'ORDER'
+stringLimit ::= 'limit' | 'LIMIT'
+// todo note when publish
+envVar ::= '${' (baseString [PERIOD])* '}'
+functionName ::= 'TIMESTAMPDD' | 'TIMESTAMPDIFF' |'SUM' | 'FLOOR' | 'CAST' | 'TIMESTAMP'
+note ::= ('--'allString* | '/*' allString* '*/' | '#'allString*)
+key::=
+    ('timestamp'|rawString|PERIOD)*
+val::=  (COLON | HYPHEN | UNDERSCORE |EQUALS| 'timestamp' | PERIOD | NUMBER | COMMA | SLASH | '\' | '"' | SEMI_COLON |envVar |  selectV2  | baseString|'${' baseString '}')*
+dynamicTableOptions::= PLUS 'OPTIONS'(key'='val [COMMA key'='val]ANY)
+booleanExpression ::= booleanValueExpression
+booleanValueExpression ::= booleanTerm ( 'OR' booleanTerm)*
+booleanTerm ::= booleanFactor ('AND' booleanFactor)*
+booleanFactor ::= [stringNot]  booleanPrimary
+booleanPrimary ::= existsPredicate
+                    | (commonValueExpression [betweenPredicate|matchPredicate|likeRegexPredicate|inPredicate|isNullPredicate|quantifiedComparisonPredicate|comparisonPredicate])
+
+
+betweenPredicate ::= [stringNot] commonValueExpression 'AND' commonValueExpression
+matchPredicate ::= [stringNot] ('LIKE' | 'SIMILAR' 'TO') commonValueExpression ['ESCAPE' string | (LBRACE 'ESCAPE' string RBRACE) ]
+likeRegexPredicate ::= [stringNot] 'LIKE_REGEX' commonValueExpression
+inPredicate ::= [stringNot] 'IN' (subQuery | LEFT_BRACKET commonValueExpression )
+isNullPredicate ::= 'IS' [stringNot] 'NULL'
+quantifiedComparisonPredicate ::= comparisonOperator [ 'ANY' | 'SOME' | 'ALL' ] ( [LEFT_BRACKET] queryWithoutSemiColon [RIGHT_BRACKET] | ( LEFT_BRACKET expression RIGHT_BRACKET )  )
+comparisonPredicate ::= comparisonOperator commonValueExpression
+commonValueExpression ::= numericValueExpression (('&&'|'||') numericValueExpression)*
+existsPredicate ::= 'EXISTS' query
+comparisonOperator ::= '=' | '!=' | '<>' | '<' | '<=' | '>=' | '>'
+numericValueExpression ::= term (('+'| '-' | '*' | '/') term)*
+term ::= valueExpressionPrimary ( (ANY) valueExpressionPrimary )*
+valueExpressionPrimary ::=    (['+'|'-'] unsignedNumericLiteral | unsignedValueExpressionPrimary ('[' numericValueExpression ']')* ) | nonNumericLiteral
+nonNumericLiteral ::= ('FALSE' | 'TRUE' | 'NULL' | stringLike | ([catalogName PERIOD][SINGLE_QUOTATION['%']]baseString[['%']SINGLE_QUOTATION]) )*
+unsignedNumericLiteral ::= NUMBER
+unsignedValueExpressionPrimary ::= parameterReference
+                                     | escapedFunction function RBRACE
+                                     | unescapedFunction
+                                     | (identifier | nonReservedIdentifier)
+                                     | queryWithoutSemiColon
+                                     | nestedExpression
+                                     | searchedCaseExpression
+                                     | caseExpression
+
+escapedFunction ::= LBRACE 'FN'
+parameterReference ::=  identifier | ('{'|'FN') function '}'
+
+unescapedFunction ::= ( textAggregateFunction | standardAggregateFunction | orderedAggregateFunction ) [filterClause] [windowSpecification]
+                        | ( analyticAggregateFunction [filterClause] windowSpecification )
+                        | ( function [windowSpecification])
+letter ::= baseString
+digit ::= NUMBER
+idPart ::= ('@' | '#' | letter) (letter | '_' | digit)*
+//TODO be quoted part
+quotedId ::= idPart | baseString
+identifier::=  (quotedId (PERIOD quotedId)*) | nonReservedIdentifier
+nonReservedIdentifier::=  'INSTEDAD' | 'VIEW' | 'ENABLED'| 'DISABLED' | 'KEY' | 'SERIAL' | 'TEXTAGG' | 'COUNT' | 'ROW_NUMBER'
+   | 'RANK' | 'DENSE_RANK' | 'AVG'| 'MIN' | 'MAX' | 'EVERY' | 'STDDEV_POP' | 'STDDEV_SAMP' | 'VAR_SAMP' | 'VAR_POP'
+   | 'DOCUMENT' | 'CONTENT' | 'TRIM' | 'EMPTY' | 'ORDINALITY' | 'PATH' | 'FIRST' | 'LAST' | 'NEXT' | 'SUBSTRING' | 'EXTRACT'
+   | 'TO_CHARS' | 'TO_BYTES'| 'QUERYSTRING' | 'NAMESPACE' | 'RESULT' | 'INDEX' | 'ACCESSPATTERN'
+   | 'AUTO_INCREMENT' | 'WELLFORMED' | 'SQL_TSI_FRAC_SECOND' | 'SQL_TSI_SECOND' | 'SQL_TSI_MINUTE' | 'SQL_TSI_HOUR' | 'SQL_TSI_DAY'
+   | 'SQL_TSI_WEEK' |  'SQL_TSI_MONTH' | 'SQL_TSI_QUARTER'| 'SQL_TSI_YEAR'| 'TEXTTABLE'| 'ARRAYTABLE' | 'SELECTOR' | 'SKIP'
+   | 'WIDTH' | 'PASSING' | 'NAME' | 'ENCODING' | 'COLUMNS' | 'DELIMITER' | 'QUOTE' | 'HEADER' |'NULLS' | 'OBJECTTABLE'| 'VERSION'
+   | 'INCLUDING' | 'EXCLUDING' | 'XMLDECLARATION' | 'VARIADIC' | 'RAISE' | 'EXCEPTION' | 'CHAIN' | 'JSONARRAY_AGG' |'JSONOBJECT'
+   | 'PRESERVE'
+subQuery ::= query
+nestedExpression ::= LEFT_BRACKET [expression (COMMA expression)* ] [COMMA] RIGHT_BRACKET
+searchedCaseExpression ::= ('COUNT' LEFT_BRACKET '*' RIGHT_BRACKET)
+                            | ( 'COUNT' | 'SUM' | 'AVG' | 'MIN' | 'MAX' | 'EVERY' | 'STDDEV_POP' | 'STDDEV_SAMP'
+                            | 'VAR_SAMP' | 'VAR_POP' | 'SOME' | 'ANY' ) LEFT_BRACKET [ 'DISTINCT' | 'ALL' ] expression RIGHT_BRACKET
+caseExpression ::= stringCase [expression] stringWhen expression stringThen expression stringElse expression stringEnd
+textAggregateFunction ::=  TEXTAGG [LEFT_BRACKET] [for] derivedColumn ( COMMA derivedColumn)* [ 'DELIMITER' baseString ]  ['QUOTE' [baseString]] ['HEADER'] [ 'ENCODING' identifier ] [orderByClause] [RIGHT_BRACKET]
+standardAggregateFunction ::= ( 'COUNT' LEFT_BRACKET '*' RIGHT_BRACKET )
+                              | ( ( 'COUNT' | 'SUM' | 'AVG' | 'MIN' | 'MAX' | 'EVERY' | 'STDDEV_POP' | 'STDDEV_SAMP' | 'VAR_SAMP' | 'VAR_POP' | 'SOME' | 'ANY' )
+                                    LEFT_BRACKET ['DISTINCT' | 'ALL'] expressionList RIGHT_BRACKET )
+orderedAggregateFunction ::= ('XMLAGG' | 'ARRAY_AGG' | 'JSONARRAY_AGG' ) LEFT_BRACKET expression [orderByClause] RIGHT_BRACKET
+filterClause ::= 'FILTER' LEFT_BRACKET 'WHERE' booleanPrimary RIGHT_BRACKET
+windowSpecification ::= 'OVER' LEFT_BRACKET [ 'PARTITION' 'BY' expressionList][orderByClause] RIGHT_BRACKET
+analyticAggregateFunction ::= ('ROW_NUMBER' | 'RANK' | 'DENSE_RANK' ) LEFT_BRACKET RIGHT_BRACKET
+
+for ::= forEachRowTriggerAction | textAggregateFunction | function | textTableColumn
+derivedColumn ::= ( expression [stringAs identifier] )
+orderByClause::= 'ORDER' 'BY' sortSpecification ( COMMA sortSpecification)*
+sortSpecification ::= sortKey ['ASC' | 'DESC'] [ 'NULLS' ( 'FIRST' | 'LAST' ) ]
+sortKey ::= expression
+forEachRowTriggerAction ::= 'FOR' 'EACH' 'ROW' ('BEGIN' ['ATOMIC'] (statement)*  'END') | statement
+function::= ('CONVERT' LEFT_BRACKET expression COMMA dataType RIGHT_BRACKET)
+            | ('CAST' LEFT_BRACKET expression stringAs dataType RIGHT_BRACKET )
+            | ('SUBSTRING' LEFT_BRACKET expression ((stringFrom expression ['FOR' expression]) | (COMMA expressionList)) RIGHT_BRACKET)
+            | ('EXTRACT' LEFT_BRACKET ( 'YEAR' | 'MONTH' | 'DAY' | 'HOUR' | 'MINUTE' | 'SECOND' ) stringFrom expression RIGHT_BRACKET )
+            | ( 'TRIM' LEFT_BRACKET ( [ ( ( 'LEADING' | 'TRAILING' | 'BOTH') ( [expression] ) | expression ) stringFrom ] expression RIGHT_BRACKET ))
+            | ( ( 'TO_CHARS' | 'TO_BYTES' ) LEFT_BRACKET expression COMMA baseString [ COMMA expression ] RIGHT_BRACKET )
+            | ('TO_TIMESTAMP' LEFT_BRACKET expression COMMA SINGLE_QUOTATION baseString* SINGLE_QUOTATION RIGHT_BRACKET)
+            | ('FROM_UNIXTIME' LEFT_BRACKET expression  RIGHT_BRACKET)
+            | ( ( 'TIMESTAMPADD' | 'TIMESTAMPDIFF' ) LEFT_BRACKET timeInterval COMMA expression COMMA expression RIGHT_BRACKET )
+            | queryStringFunction
+            | ( ( 'LEFT' | 'RIGHT' | 'CHAR' | 'USER' | 'YEAR' | 'MONTH' | 'HOUR' | 'MINUTE' | 'SECOND' | 'XMLCONCAT' | 'XMLCOMMENT' | 'XMLTEXT' ) LEFT_BRACKET ( [expressionList] RIGHT_BRACKET ))
+            | ( ( 'TRANSLATE' | stringInsert ) LEFT_BRACKET [expressionList] RIGHT_BRACKET )
+            | ( 'XMLPI' LEFT_BRACKET ( ['NAME'] identifier ) [ COMMA expression ] RIGHT_BRACKET )
+            | ( identifier LEFT_BRACKET ['ALL' | 'DISTINCT']  [expressionList] [orderByClause] RIGHT_BRACKET [filterClause])
+            | (functionName LEFT_BRACKET baseString* RIGHT_BRACKET)
+
+
+dataType ::= !'_' (simpleDataType)
+simpleDataType ::= ('VARCHAR' [ LEFT_BRACKET NUMBER RIGHT_BRACKET] )
+                   | 'BOOLEAN'
+                   | 'BYTE'
+                   | 'TINYINT'
+                   | 'INT'
+                   | 'SHORT'
+                   | 'SMALLINT'
+                   | 'STRING'
+                   | ('CHAR' [ LEFT_BRACKET NUMBER RIGHT_BRACKET ])
+                   | 'INTEGER'
+                   | 'LONG'
+                   | 'BIGINT'
+                   | ('BIGINTEGER' [LEFT_BRACKET NUMBER RIGHT_BRACKET ])
+                   | 'FLOAT'
+                   | 'REAL'
+                   | 'DOUBLE'
+                   | ( 'BIGDECIMAL' [LEFT_BRACKET NUMBER [COMMA NUMBER] RIGHT_BRACKET] )
+                   | ( 'DECIMAL' [ LEFT_BRACKET NUMBER [COMMA NUMBER] RIGHT_BRACKET ] )
+                   | 'DATE'
+                   // TIME LEFT_BRACKET NUMBER RIGHT_BRACKET
+                   | ('TIME'  LEFT_BRACKET NUMBER RIGHT_BRACKET)
+                   | ('TIMESTAMP' [LEFT_BRACKET NUMBER RIGHT_BRACKET])
+                   | ('OBJECT' [LEFT_BRACKET NUMBER RIGHT_BRACKET] )
+                   | ('BLOB'  [LEFT_BRACKET NUMBER RIGHT_BRACKET] )
+                   | ('CLOB' [LEFT_BRACKET NUMBER RIGHT_BRACKET] )
+                   | ('VARBINARY' [LEFT_BRACKET NUMBER RIGHT_BRACKET] )
+                   | 'GEOMETRY'
+                   | 'XML';
+
+queryStringFunction ::= 'QUERYSTRING' LEFT_BRACKET expression [COMMA derivedColumn] RIGHT_BRACKET
+expressionList ::= expression [COMMA expression]
+textTableColumn ::= identifier ( ('FOR' 'ORDINALITY') | ( ['HEADER' ENGLISH_STRING] dataType ['WIDTH' unsignedInteger ['NO' 'TRIM']] ['SELECTOR' ENGLISH_STRING unsignedInteger ] ) )
+timeInterval ::= 'SQL_TSI_FRAC_SECOND' |'SQL_TSI_SECOND' |'SQL_TSI_MINUTE' |'SQL_TSI_HOUR' |'SQL_TSI_DAY' | 'SQL_TSI_WEEK' |'SQL_TSI_MONTH'|'SQL_TSI_QUARTER' |'SQL_TSI_YEAR' | 'HOUR' | 'DAY'
+statement ::= ([identifier COLON] (loopStatement | whileStatement |compoundStatement)) | ( ifStatement | delimitedStatement )
+loopStatement ::= 'LOOP' 'ON' LEFT_BRACKET queryExpression RIGHT_BRACKET stringAs identifier statement
+whileStatement ::= identifier [columnList] stringAs LEFT_BRACKET queryExpression RIGHT_BRACKET
+compoundStatement ::= 'BEGIN' [[stringNot] 'ATOMIC'] (statement)* ['EXCEPTION' identifier (statement) ] END
+ifStatement ::= 'IF' LEFT_BRACKET ( ( identifier 'IS' [stringNot] 'DISTINCT' stringFrom identifier ) | condition ) RIGHT_BRACKET statement [ 'ELSE' statement ]
+delimitedStatement ::= ( assignmentStatement | dataStatement | raiseErrorStatement | raiseStatement | declareStatement | branchingStatement | returnStatement ) semicolon
+assignmentStatement ::= identifier eq (  ( callStatement [ ( 'WITH' | 'WITHOUT' ) 'RETURN' ])  | assignmentStatementOperand)
+dataStatement ::= ( directlyExecutableStatement | dynamicDataStatement )  [( 'WITH' | 'WITHOUT' ) 'RETURN']
+raiseErrorStatement ::= 'ERROR' expression
+raiseStatement ::= 'RAISE' ['SQLWARNING'|'SQLEXCEPTION'] exceptionReference
+declareStatement ::= 'DECLARE' ( dataType | 'EXCEPTION' ) identifier [eq assignmentStatementOperand]
+branchingStatement ::= (('BREAK'| 'CONTINUE') [identifier] ) | ( 'LEAVE' identifier )
+returnStatement ::= 'RETURN' [expression]
+semicolon ::= SEMI_COLON
+// todo add updateStatement, deleteStatement,drop table, createTemporaryTable,createForeignTempTable,alter,createTrigger
+directlyExecutableStatement ::= query| callStatement | insertStatement | createView | compoundStatement
+dynamicDataStatement ::= ( 'EXECUTE' | 'EXEC' ) ['STRING' | 'IMMEDIATE'] expression [stringAs typedElementList [ 'INTO' identifier ] ] ['USING' setClauseList ] ['UPDATE' ( unsignedInteger | ANY ) ]
+eq ::= EQUALS
+gt ::= '>'
+typedElementList ::= identifier dataType ( COMMA identifier dataType)*
+setClauseList ::= identifier eq expression ( COMMA identifier eq expression)*
+exceptionReference ::= identifier | sqlException
+sqlException ::= 'SQLEXCEPTION' commonValueExpression ['SQLSTATE' commonValueExpression [COMMA commonValueExpression]] ['CHAIN' exceptionReference]
+// todo add updateStatement  deleteStatement
+assignmentStatementOperand ::=  insertStatement   | queryExpression | sqlException | expression
+callStatement ::= ( ( 'EXEC' | 'EXECUTE' | 'CALL' ) identifier LEFT_BRACKET ( namedParameterList | [expressionList] ) RIGHT_BRACKET )
+namedParameterList ::= ( identifier eq [gt] expression ( COMMA identifier eq [gt] expression )* )
+queryExpression ::= ['WITH' withListElement (COMMA withListElement)*] queryExpressionBody
+columnList ::= LEFT_BRACKET identifier (COMMA identifier) RIGHT_BRACKET
+withListElement ::= identifier [columnList] stringAs LEFT_BRACKET queryExpression RIGHT_BRACKET
+//flink sql not have  optionClause, so remove [optionClause] on tail
+queryExpressionBody ::= queryTerm [('UNION'|'EXPECT') ['ALL' | 'DISTINCT'] queryTerm] [orderByClause] [limitClause]
+queryTerm ::= queryPrimary ('INTERSECT'[ 'ALL' | 'DISTINCT'] queryPrimary)*
+limitClause ::= ('LIMIT' NUMBER [COMMA NUMBER]) | ('OFFSET' NUMBER ('ROW' | 'ROWS') [fetchClause]) | (fetchClause)
+queryPrimary ::= query ('MAKEDEP' identifier )
+fetchClause ::= 'FETCH' ('FIRST' | 'NEXT') [NUMBER] ('ROW'|'ROWS') 'ONLY'
+unsignedInteger ::= NUMBER
+condition ::=  booleanValueExpression
+expression ::=  function | condition
+
+
+orderItem ::= baseString ['ASC' | 'DESC']
+patternQuantifier ::=
+    '*'
+  | '*?'
+  | '+'
+  | '+?'
+  | '?'
+  | '??'
+  | '{' { [ 'MINREPEAT' ]COMMA [ 'MAXREPEAT' ] } '}' ['?']
+  | '{' 'REPEAT' '}'
+
+patternFactor::=
+    'VARIABLE' [ patternQuantifier ]
+
+patternTerm::=
+    patternFactor [ patternFactor ]ANY
+
+pattern::=
+    patternTerm [ '|' patternTerm ]ANY
+
+intervalLiteral::= baseString
+
+measureColumn::=
+    expression stringAs 'ALIAS'
+
+
+selectStatement::= selectV2 SEMI_COLON | selectWithoutFrom SEMI_COLON
+
+
+selectV2 ::= selectClause [intoClause] [fromClause [whereClause] [orderByClause] [groupByClause] [havingClause] [limitClause] ]
+selectClause ::=  stringSelect [ 'ALL' | 'DISTINCT' ] ( '*' | ( selectSublist ( COMMA selectSublist)* ) )
+intoClause ::= 'INTO' identifier
+fromClause ::= stringFrom ( tableReferenceV2 ( COMMA tableReferenceV2 )* )
+whereClause ::= 'WHERE' condition
+groupByClause ::= stringGroup stringBy ( 'ROLLUP' '(' expressionList ')' | expressionList)*
+havingClause ::= 'HAVING' condition
+tableReferenceV2 ::= (escapedJoin joinedTable RBRACE ) | joinedTable
+escapedJoin ::= '{' | 'oj'
+
+joinedTable ::= tablePrimaryV2 ( crossJoin | qualifiedTable )*
+crossJoin ::=  ( 'CROSS' | 'UNION' ) 'JOIN' tablePrimaryV2
+qualifiedTable ::=  [ ( 'RIGHT' [ 'OUTER' ] ) | ( 'LEFT' [ 'OUTER' ] ) | ( 'FULL' [ 'OUTER' ] ) | 'INNER' ] 'JOIN' tableReference 'ON' condition
+tablePrimaryV2 ::= (  tableNameV2 | tableSubQuery | ( ['('] joinedTable [')'] ) ) [ ( 'MAKEDEP' makeDepOptions ) | 'MAKENOTDEP' ] [ ( 'MAKEIND' makeDepOptions ) ]
+//tablePrimaryV2 ::= (  tableNameV2 | tableSubQuery  ) [ ( 'MAKEDEP' makeDepOptions ) | 'MAKENOTDEP' ] [ ( 'MAKEIND' makeDepOptions ) ]
+tableSubQuery ::= [ 'TABLE' | 'LATERAL' ] '(' ( queryExpression| callStatement ) ')' [stringAs] identifier
+makeDepOptions ::= [ '(' [ 'MAX' COLON NUMBER ] [ [ 'NO' ] 'JOIN' ] ')' ]
+tableNameV2 ::=  identifier ( [stringAs] identifier )?
+
+selectSublist::= selectDerivedColumn | allInGroup
+selectDerivedColumn ::=  [tableName'.'] expression [stringAs identifier ]
+allInGroup ::= identifier PERIOD '*'
+
+selectWithoutFrom::=
+    stringSelect [ 'ALL' | 'DISTINCT' ]
+    { '*' | selectSublist [COMMA selectSublist ] '*' }
+
+
+queryStatement ::= query
+query::=
+    values
+  | ((
+        selectV2
+      | selectWithoutFrom
+      | query2 'UNION' [ 'ALL' ] query2
+      | query2 'EXPECT' query2
+      | query2 'INTERSECT' query2
+    )*
+    [ 'ORDER BY' orderItem [COMMA orderItem ]ANY ]
+    [ 'LIMIT' { 'COUNT' | 'ALL' } ]
+    [ 'OFFSET START' { 'ROW' | 'ROWS' } ]
+    [ 'FETCH' { 'FIRST' | 'NEXT' } [ 'COUNT' ] { 'ROW' | 'ROWS' } 'ONLY']
+    SEMI_COLON
+    )
+
+query2::=
+    values
+  | ((
+        selectV2
+      | selectWithoutFrom
+      | 'UNION' [ 'ALL' ] query2
+      | 'EXPECT`' query2
+      | 'INTERSECT' query2
+    )*
+    [ 'ORDER BY' orderItem [COMMA orderItem ]ANY ]
+    [ 'LIMIT' { 'COUNT' | 'ALL' } ]
+    [ 'OFFSET START' { 'ROW' | 'ROWS' } ]
+    [ 'FETCH' { 'FIRST' | 'NEXT' } [ 'COUNt' ] { 'ROW' | 'ROWS' } 'ONLY']
+    SEMI_COLON
+    )
+  | ε
+
+queryWithoutSemiColon::=
+    values
+  | {
+        selectV2
+      | selectWithoutFrom
+      | queryWithoutSemiColon2 'UNION' [ 'ALL' ] queryWithoutSemiColon2
+      | queryWithoutSemiColon2 'EXPECT' queryWithoutSemiColon2
+      | queryWithoutSemiColon2 'INTERSECT' queryWithoutSemiColon2
+    }
+    [ 'ORDER BY' orderItem [COMMA orderItem ]ANY ]
+    [ 'LIMIT' { 'COUNT' | 'ALL' } ]
+    [ 'OFFSET START' { 'ROW' | 'ROWS' } ]
+    [ 'FETCH' { 'FIRST' | 'NEXT' } [ 'COUNT' ] { 'ROW' | 'ROWS' } 'ONLY']
+
+queryWithoutSemiColon2::=
+    values
+  | {
+        selectV2
+      | selectWithoutFrom
+      | 'UNION' [ 'ALL' ] queryWithoutSemiColon2
+      | 'EXPECT`' queryWithoutSemiColon2
+      | 'INTERSECT' queryWithoutSemiColon2
+    }
+    [ 'ORDER BY' orderItem [COMMA orderItem ]ANY ]
+    [ 'LIMIT' { 'COUNT' | 'ALL' } ]
+    [ 'OFFSET START' { 'ROW' | 'ROWS' } ]
+    [ 'FETCH' { 'FIRST' | 'NEXT' } [ 'COUNt' ] { 'ROW' | 'ROWS' } 'ONLY']
+  | ε
+
+withItem::=
+    baseString
+    [ ( 'COLUMN' [COMMA 'COLUMN' ]ANY ) ]
+    stringAs ( query )
+
+
+joinCondition::=
+    'NATURAL' booleanExpression
+  | 'USING' '(' column [COMMA column ]ANY ')'
+
+
+tableExpression2::=
+   tableName
+  | tableReference [COMMA tableReference ]'*'
+  | [ 'NATURAL' ] [ 'LEFT' | 'RIGHT' | 'FULL' ] 'JOIN'  ['FOR'] ['SYSTEM_TIME AS OF'] tableExpression2 [ joinCondition ]
+  | baseString
+  | ε
+
+tableExpression::=
+   tableName
+   | tableReference [COMMA tableReference ]'*'
+   | tableExpression2 [ 'NATURAL' ] [ 'LEFT' | 'RIGHT' | 'FULL' ] 'JOIN'  ['FOR SYSTEM_TIME AS OF'] tableExpression2 [ joinCondition ]
+   | baseString
+
+column ::= baseString
+
+matchRecognize::=
+    'MATCH_RECOGNIZE' '('
+    [ 'PARTITION BY' expression [COMMA expression ]ANY ]
+    [ 'ORDER BY' orderItem [COMMA orderItem ]ANY ]
+    [ 'MEASURES' measureColumn [COMMA measureColumn ]ANY ]
+    [ 'ONE' 'ROW' 'PER' 'MATCH' ]
+    [ 'AFTER' 'MATCH'
+      ( 'SKIP' 'TO' 'NEXT' 'ROW'
+      | 'SKIP' 'PAST' 'LAST' 'ROW'
+      | 'SKIP' 'TO' 'FIRST' 'VARIABLE'
+      | 'SKIP' 'TO' 'LAST' 'VARIABLE'
+      | 'SKIP' 'TO' 'VARIABLE' )
+    ]
+    'PATTERN' '(' pattern ')'
+    [ 'WITHIN' intervalLiteral ]
+    'DEFINE' 'VARIABLE' stringAs 'CONDITION' [COMMA 'VARIABLE' stringAs 'CONDITION' ]ANY
+    ')'
+
+
+tableReference::=
+    tablePrimary
+    [ matchRecognize ]
+    [ [ stringAs ] 'ALIAS' [ '(' baseString [COMMA baseString ]ANY ')' ] ]
+
+tablePrimary::=
+  [ 'TABLE' ] tablePath [ dynamicTableOptions ] [systemTimePeriod] [[stringAs] baseString]
+  | 'LATERAL' 'TABLE' '(' baseString '(' expression [COMMA expression ]ANY ')' ')'
+  | [ 'LATERAL' ] '(' query ')'
+  | 'UNNSET' '(' expression ')'
+
+tablePath::=
+    [ [ catalogName PERIOD ] dbName PERIOD ] tableName
+
+
+systemTimePeriod::=
+    'FOR' 'SYSTEM_TIME' stringAs 'OF' catalogName PERIOD tableNameV2 [stringAs baseString] condition
+
+values::=
+    'VALUES' expression [COMMA expression ]ANY
+
+
+createStatement ::= (createTable | createView) SEMI_COLON
+
+createView ::= stringCreate ['TEMPORARY'] 'VIEW' ['IF' stringNot 'EXISTS'] [catalogName PERIOD][dbName PERIOD]tableName
+                 [( columnName (COMMA columnName )* )] ['COMMENT' commentContent]
+                 stringAs queryWithoutSemiColon
+
+createTable ::= stringCreate stringTable [IF NOT EXSIT] [catalogName PERIOD][dbName PERIOD] tableName
+                LEFT_BRACKET
+                  oneTableField(COMMA oneTableField)*
+                  ['COMMENT' commentContent]
+                  ['PARTITIONED BY' (columnName[COMMA])*]
+                 RIGHT_BRACKET
+                 withStr
+                 '('
+                     (SINGLE_QUOTATION key SINGLE_QUOTATION EQUALS SINGLE_QUOTATION val SINGLE_QUOTATION)
+                      (COMMA SINGLE_QUOTATION key SINGLE_QUOTATION EQUALS SINGLE_QUOTATION val SINGLE_QUOTATION)*
+                  [ 'LIKE' sourceTable [( likeOptions )] | stringAs query ]
+                ')'
+
+
+withStr ::= 'WITH'
+catalogName ::= baseString | envVar
+dbName ::= baseString | envVar
+
+tableName ::=  ( HYPHEN | UNDERSCORE | baseString | envVar)*
+
+oneTableField ::=  [ metadataColumnDefinition | physicalColumnDefinition | computedColumnDefinition  ]
+                   [ watermarkDefinition ]
+                   [ tableConstraint ]
+                   ['COMMENT' commentContent]
+
+columnName ::= specialColumnName | commonColumnName
+commonColumnName ::=  ( HYPHEN | UNDERSCORE | baseString ) *
+specialColumnName ::=  '`'( HYPHEN | UNDERSCORE | rawString ) * '`'
+
+commentContent ::= (SINGLE_QUOTATION(COLON | HYPHEN | UNDERSCORE | allString*)SINGLE_QUOTATION)*
+
+
+physicalColumnDefinition::=
+                columnName ( dataType ) [columnConstraint]
+
+metadataColumnDefinition::=
+            columnName dataType 'METADATA'
+            [stringFrom SINGLE_QUOTATION metadataKey SINGLE_QUOTATION ]
+            [ 'VIRTUAL' ]
+
+
+columnConstraint::= ['CONSTRAINTS' columnName] ['PRIMARY KEY'] [stringNot] ['NULL'] ['ENFORCED']
+
+tableConstraint::= ['CONSTRAINTS' columnName] 'PRIMARY KEY' '(' columnName (COMMA columnName)* ')' [stringNot] 'ENFORCED'
+
+
+computedColumnDefinition ::= (columnName stringAs computedColumnExpression) | (function stringAs columnName)
+watermarkDefinition ::= 'WATERMARK' 'FOR' baseString stringAs watermarkStrategyExpression
+
+sourceTable::=[baseString COMMA][baseString COMMA]baseString
+likeOptions::={
+                   { 'INCLUDING' | 'EXCLUDING' } { 'ALL' | 'CONSTRAINTS' | 'PARTITIONS' }
+                 | { 'INCLUDING' | 'EXCLUDING' | 'OVERWRITING' } { 'GENERATED' | 'OPTIONS' | 'WATERMARKS' }
+                }*
+
+computedColumnExpression ::= baseString | 'PROCTIME()'
+watermarkStrategyExpression ::= baseString
+
+metadataKey ::= rawString
+
+jarCommand ::=  addJar | showJar | removeJar
+pathToFileName ::= (baseString| COLON | HYPHEN | '/' | UNDERSCORE )*
+addJar ::= 'ADD' 'JAR' SINGLE_QUOTATION pathToFileName PERIOD 'jar' SINGLE_QUOTATION SEMI_COLON
+showJar ::= 'SHOW' 'JARS' SEMI_COLON
+removeJar ::= 'REMOVE' 'JAR' SINGLE_QUOTATION pathToFileName PERIOD 'jar' SINGLE_QUOTATION SEMI_COLON
+
+insertStatement ::= insertFromSelectQueries | insertValuesIntoTables  | insertIntoMultipleTables
+insertFromSelectQueries ::= stringInsert { stringInto | 'OVERWRITE' }
+                                [catalogName PERIOD][dbName PERIOD]tableName
+                                ['PARTITION' partSpec] [columnList]
+                                query
+
+partSpec ::= LEFT_BRACKET key '=' [SINGLE_QUOTATION]val[SINGLE_QUOTATION]
+              (COMMA key '=' [SINGLE_QUOTATION]val[SINGLE_QUOTATION] )*
+            RIGHT_BRACKET
+
+insertValuesIntoTables ::= stringInsert { 'INTO' | 'OVERWRITE' }
+                                [catalogName PERIOD][dbName PERIOD]tableName
+                                'VALUES' valuesRow
+                                (COMMA valuesRow)* SEMI_COLON
+
+valuesRow ::= LEFT_BRACKET [SINGLE_QUOTATION]baseString*[SINGLE_QUOTATION]
+                   (COMMA baseString)* RIGHT_BRACKET
+
+insertIntoMultipleTables ::= 'EXECUTE' 'STATEMENT' 'SET' 'BEGIN'  (insertFromSelectQueries | insertValuesIntoTables)* 'END' SEMI_COLON

@@ -1,0 +1,26 @@
+<idea-plugin>
+    <id>com.camile.checker</id>
+    <name>Flink SQL Checker</name>
+    <vendor email="camilesing@gmail.com"/>
+
+    <depends>com.intellij.modules.platform</depends>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <fileType
+                name="Flink-SQL"
+                implementationClass="com.camile.checker.FlinkSqlFileType"
+                fieldName="INSTANCE"
+                language="Flink-SQL"
+                extensions="fql"/>
+
+        <lang.parserDefinition
+                language="Flink-SQL"
+                implementationClass="com.camile.checker.FlinkSqlParserDefinition"/>
+
+    </extensions>
+
+    <actions>
+        <!-- Add your actions here -->
+    </actions>
+    <description>This extension provides Flink SQL support for IntelliJ. It also provides some grammar check.</description>
+</idea-plugin>

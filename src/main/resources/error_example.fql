@@ -1,0 +1,16 @@
+-- not pass: should check error
+CREATE TABLE Kafka_Table error (
+  `user_id` BIGINT,
+  `item_id` BIGINT,
+  `behavior` STRING,
+  `ts` TIMESTAMP(3),
+  `timestampV2` BIGINT,
+  `offset` BIGINT
+) WITH (
+  'connector' = 'kafka',
+  'topic' = 'user_behavior',
+  'properties.bootstrap.servers' = 'localhost:9092',
+  'properties.group.id' = 'testGroup',
+  'scan.startup.mode' = 'earliest-offset',
+  'format' = 'csv'
+);

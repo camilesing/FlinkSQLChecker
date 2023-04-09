@@ -1,0 +1,110 @@
+SELECT product, f3, amount, user_id FROM Orders WHERE  user_id = 1;
+SELECT product, f3, amount, user_id FROM Orders WHERE  user_id = 1 or user_id = 2 and f3 ='3A';
+SELECT product, f3, amount, user_id FROM Orders WHERE  product like '%oil%';
+select * from sl_dim_entity_table where id = 1 and dt = (select dt from sl_dim_entity_table order by dt desc limit 1);
+
+-- define my table
+/*
+  define my table
+*/
+# define my table
+
+CREATE TABLE Kafka_Table (
+  `user_id` BIGINT,
+  `item_id` BIGINT,
+  `behavior` STRING,
+  `ts` TIMESTAMP(3),
+  `timestampV2` BIGINT,
+  `offset` BIGINT
+) WITH (
+  'connector' = 'kafka',
+  'topic' = 'user_behavior',
+  'properties.bootstrap.servers' = 'localhost:9092',
+  'properties.group.id' = 'testGroup',
+  'scan.startup.mode' = 'earliest-offset',
+  'format' = 'csv'
+);
+CREATE TABLE Kafka_Table (
+  `user_id` BIGINT,
+  `item_id` BIGINT,
+  `behavior` STRING,
+  `ts` TIMESTAMP(3) METADATA FROM 'timestamp',
+  `timestamp` BIGINT METADATA,
+  `offset` BIGINT METADATA VIRTUAL
+) WITH (
+  'connector' = 'kafka',
+  'topic' = 'user_behavior',
+  'properties.bootstrap.servers' = 'localhost:9092',
+  'properties.group.id' = 'testGroup',
+  'scan.startup.mode' = 'earliest-offset',
+  'format' = 'csv'
+);
+
+CREATE TABLE sl_dim_entity_store_host_fct (
+  `id` string ,
+  `internal_sign` String
+) WITH (
+  'stp.source.id' = '315',
+  'connector' = 'custom-lookup-jdbc',
+  'url' = 'jdbc:mysql://127.0.0.1:9091:/my_test_schema',
+  'username' = 'user',
+  'password' = 'password',
+  'table-name' = 'sl_dim_entity_table',
+  'driver' = 'com.mysql.cj.jdbc.Driver',
+  'lookup.cache.ttl' = '3600',
+  'lookup.cache.max-rows' = '100000',
+  'custom.query' = 'select * from sl_dim_entity_table where id = 1 and dt = (select dt from sl_dim_entity_table order by dt desc limit 1);'
+);
+
+
+
+create TEMPORARY VIEW view_member_count_detail AS
+select
+  TO_TIMESTAMP(
+    FROM_UNIXTIME(dt / 1000),
+    'yyyy-MM-dd HH:mm:ss'
+  ) as dt,
+  user_id, age
+from
+  source_ods_table
+where
+  age >= 20 and age <= 10;
+
+create TEMPORARY VIEW view_member_count_detail AS
+select
+  case
+    when (valid = 0) then 1
+    else -1
+  end as cnt,
+  user_id, age
+from
+  source_ods_table
+where
+  age >= 20 and age <= 10
+  AND TIMESTAMPDIFF(HOUR, streaming.createTime, LOCALTIMESTAMP) <= 24
+  AND TIMESTAMPDIFF(DAY, streaming.createTime, LOCALTIMESTAMP) <= 1;
+
+create TEMPORARY VIEW view_member_count_detail AS
+select
+  user_id, age
+from
+  source_ods_table
+where
+  age >= 20 and age <= 10;
+
+
+ADD JAR '/path/hello.jar';
+SHOW JARS;
+REMOVE JAR '/path/hello.jar';
+
+INSERT INTO country_page_view PARTITION (date='2019-8-30', country='China')
+SELECT user, cnt FROM page_view_source;
+INSERT INTO students VALUES ('fred flintstone', 35, 1.28), ('barney rubble', 32, 2.32);
+
+EXECUTE STATEMENT SET
+BEGIN
+INSERT INTO students
+  VALUES ('fred flintstone', 35, 1.28), ('barney rubble', 32, 2.32);
+INSERT INTO students
+  VALUES ('fred flintstone', 35, 1.28), ('barney rubble', 32, 2.32);
+END;

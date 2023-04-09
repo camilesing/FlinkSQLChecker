@@ -1,0 +1,14 @@
+create TEMPORARY VIEW result_public_comment_streaming AS
+select
+  sum(cnt) as cnt,
+  FLOOR(create_time to hour) as create_time,
+  store_id,
+  spu_id
+from
+  view_public_comment_streaming streaming
+where
+  cast(store_id as bigint) is not null
+group by
+  FLOOR(create_time to hour),
+  store_id,
+  spu_id;

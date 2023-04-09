@@ -1,0 +1,402 @@
+{
+  parserClass="com.camile.checker.FlinkSqlCheckerParser"
+  extends="com.intellij.extapi.psi.ASTWrapperPsiElement"
+
+  psiClassPrefix="FqlChecker"
+  psiImplClassSuffix="Impl"
+  psiPackage="com.camile.checker.psi"
+  psiImplPackage="com.camile.checker.psi.impl"
+
+  elementTypeHolderClass="com.camile.checker.FlinkSqlCheckerTypes"
+  elementTypeClass="com.camile.checker.FqlElementType"
+  tokenTypeClass="com.camile.checker.FqlTokenType"
+  tokens = [
+        // 空白字符，例如空格、制表符
+        WHITE_SPACE = 'regexp:\s+'
+        // 注释的正则表达式，以 -- 开头
+        COMMENT = '--'
+        HYPHEN = "-"
+        UNDERSCORE = '_'
+        COMMA =","
+        PLUS ="+"
+        PERIOD ='.'
+        COLON =':'
+        ANY ='*'
+        EQUALS = '='
+        SEMI_COLON=';'
+        SINGLE_QUOTATION = "\'"
+        LEFT_BRACKET = 'regexp:\('
+        RIGHT_BRACKET = 'regexp:\)'
+        FLINK_SQL_TYPE = 'regexp:BIGINT|STRING|bigint|string|TIMESTAMP|timestamp'
+        BASIC_STRING = 'regexp:[0-9a-zA-Z]*'
+        NUMBER_STRING = 'regexp:[1234567890]*'
+        CONSTANT_WITH = 'regexp:WITH|with'
+        CONSTANT_UNION = 'regexp:union|UNION'
+        CONSTANT_EXPECT = 'regexp:expect|EXPECT'
+        CONSTANT_INTERSECT = 'regexp:intersect|INTERSECT'
+        CONSTANT_ORDER_BY ='regexp:order by|ORDER BY'
+        CONSTANT_LIMIT = 'regexp:limit|LIMIT'
+        CONSTANT_COUNT = 'regexp:count|COUNT'
+        CONSTANT_ALL = 'regexp:all|ALL'
+        CONSTANT_OFFSET_START = 'regexp:offset start|OFFSET START'
+        CONSTANT_ROW = 'regexp:row|ROW'
+        CONSTANT_ROWS = 'regexp:rows|ROWS'
+        CONSTANT_FETCH = 'regexp:fetch|FETCH'
+        CONSTANT_FIRST = 'regexp:first|FIRST'
+        CONSTANT_NEXT = 'regexp:next|NEXT'
+        CONSTANT_COUNT = 'regexp:count|COUNT'
+        CONSTANT_ONLY = 'regexp:only|ONLY'
+        CONSTANT_COLUMN = 'regexp:column|COLUMN'
+        CONSTANT_AS = 'regexp:as|AS'
+        CONSTANT_SELECT = 'regexp:select|SELECT'
+        CONSTANT_DISTINCT = 'regexp:distinct|DISTINCT'
+        CONSTANT_FROM = 'regexp:from|FROM'
+        CONSTANT_WHERE = 'regexp:where|WHERE'
+        CONSTANT_GROUP_BY = 'regexp:group by|GROUP BY'
+        CONSTANT_WINDOWS = 'regexp:windows|WINDOWS'
+        CONSTANT_HAVING= 'regexp:having|HAVING'
+        CONSTANT_PERIOD= 'regexp:period|PERIOD'
+        CONSTANT_LEFT= 'regexp:left|LEFT'
+        CONSTANT_RIGHT= 'regexp:right|RIGHT'
+        CONSTANT_NATURAL= 'regexp:natural|NATURAL'
+        CONSTANT_FULL= 'regexp:full|FULL'
+        CONSTANT_JOIN= 'regexp:join|JOIN'
+        CONSTANT_USING= 'regexp:using|USING'
+        CONSTANT_ON= 'regexp:on|ON'
+        CONSTANT_ALIAS = 'regexp:alias|ALIAS'
+        CONSTANT_TABLE = 'regexp:table|TABLE'
+        CONSTANT_LATERAL = 'regexp:lateral|LATERAL'
+        CONSTANT_UNNEST = 'regexp:unnset|UNNSET'
+        CONSTANT_VALUES = 'regexp:values|VALUES'
+        CONSTANT_PARITION_BY = 'regexp:partition by|PARTITION BY'
+        CONSTANT_RANGE = 'regexp:range|RANGE'
+        CONSTANT_PRECEDING = 'regexp:preceding|PRECEDING'
+        CONSTANT_MATCH_RECOGNIZE = 'regexp:match recognize|MATCH RECOGNIZE'
+        CONSTANT_CUBE= 'regexp:cube|CUBE'
+        CONSTANT_ROLLUP= ' regexp:rollup|ROLLUP'
+        CONSTANT_MEASURES = 'regexp:measures|MEASURES'
+        CONSTANT_ONE = ' regexp:one|ONE'
+        CONSTANT_PER = ' regexp:per|PER'
+        CONSTANT_MATCH = ' regexp:match|MATCH'
+        CONSTANT_GROUPING_SETS = 'regexp:grouping sets|GROUPING SETS'
+        CONSTANT_AFTER = 'regexp:after|AFTER'
+        CONSTANT_SKIP = 'regexp:skip|SKIP'
+        CONSTANT_TO= 'regexp:to|TO'
+        CONSTANT_FIRST = 'regexp:first|FIRST'
+        CONSTANT_LAST = 'regexp:last|LAST'
+        CONSTANT_VARIABLE = 'regexp:variable|VARIABLE'
+        CONSTANT_PAST = 'regexp:past|PAST'
+        CONSTANT_DEFINE = 'regexp:define|DEFINE'
+        CONSTANT_PATTERN = 'regexp:pattern|PATTERN'
+        CONSTANT_WITHIN = 'regexp:within|WITHIN'
+        CONSTANT_CONDITION = 'regexp:condition|CONDITION'
+        CONSTANT_MIN_REPEAT = 'regexp:minrepeat|MINREPEAT'
+        CONSTANT_MAX_REPEAT = 'regexp:maxrepeat|MAXREPEAT'
+        CONSTANT_REPEAT = 'regexp:repeat|REPEAT'
+        CONSTANT_ASC = 'regexp:asc|ASC'
+        CONSTANT_DESC = 'regexp:desc|DESC'
+        CONSTANT_MATCH_RECOGNIZE= 'regexp:MATCH_RECOGNIZE|match_recognize'
+        CONSTANT_CREATE_TABLE= 'regexp:CREATE TABLE|create table'
+        CONSTANT_IF_NOT_EXSIT= 'regexp:IF NOT EXSIT|if not exsit'
+        CONSTANT_COMMENT= 'regexp:COMMENT|comment'
+        CONSTANT_PARTITIONED_BY= 'regexp:PARTITIONED BY|partitioned by'
+        CONSTANT_LIKE= 'regexp:LIKE|like'
+        CONSTANT_FOR= 'regexp:FOR|for'
+        CONSTANT_SYSTEM_TIME= 'regexp:SYSTEM_TIME|system_time'
+        CONSTANT_OF= 'regexp:OF|of'
+        CONSTANT_PRIMARY_KEY= 'regexp:PRIMARY KEY|primary key'
+        CONSTANT_NOT= 'regexp:NOT|not'
+        CONSTANT_ENFORCED= 'regexp:ENFORCED|enforced'
+        CONSTANT_METADATA= 'regexp:metadata|METADATA'
+        CONSTANT_VIRTUAL= 'regexp:VIRTUAL|virtual'
+        CONSTANT_WATERMARK= 'regexp:WATERMARK|watermark'
+        CONSTANT_INCLUDING= 'regexp:INCLUDING|including'
+        CONSTANT_EXCLUDING= 'regexp:EXCLUDING|excluding'
+        CONSTANT_CONSTRAINTS= 'regexp:CONSTRAINTS|constraints'
+        CONSTANT_PARTITIONS= 'regexp:PARTITIONS|partitions'
+        CONSTANT_OVERWRITING= 'regexp:OVERWRITING|overwriting'
+        CONSTANT_GENERATED= 'regexp:GENERATED|generated'
+        CONSTANT_OPTIONS= 'regexp:OPTIONS|options'
+        CONSTANT_WATERMARKS= 'regexp:WATERMARKS|watermarks'
+        CONSTANT_ADD= 'regexp:ADD|add'
+        CONSTANT_SHOW= 'regexp:SHOW|show'
+        CONSTANT_JARS= 'regexp:JARS|jars'
+        CONSTANT_JAR= 'regexp:JAR|jar'
+        CONSTANT_INSERT= 'regexp:INSERT|insert'
+        CONSTANT_INTO= 'regexp:INTO|into'
+        CONSTANT_OVERWRITE= 'regexp:OVERWRITE|overwrite'
+  ]
+
+}
+
+fql ::= statement *
+statement ::= selectStatement | queryStatement | createStatement | jarCommand | insertStatement
+
+key::=
+    (BASIC_STRING|PERIOD)*
+
+val::= (COLON | HYPHEN | UNDERSCORE | BASIC_STRING)*
+
+dynamicTableOptions::= PLUS CONSTANT_OPTIONS(key'='val [COMMA key'='val]ANY)
+booleanExpression ::= (BASIC_STRING | '%' | '=' |'-' | '+' | '_' |SINGLE_QUOTATION)*
+expression ::= BASIC_STRING
+orderItem ::= BASIC_STRING ['ASC' | 'DESC']
+patternQuantifier ::=
+    '*'
+  | '*?'
+  | '+'
+  | '+?'
+  | '?'
+  | '??'
+  | '{' { [ 'MINREPEAT' ]COMMA [ 'MAXREPEAT' ] } '}' ['?']
+  | '{' 'REPEAT' '}'
+
+patternFactor::=
+    'VARIABLE' [ patternQuantifier ]
+
+patternTerm::=
+    patternFactor [ patternFactor ]ANY
+
+pattern::=
+    patternTerm [ '|' patternTerm ]ANY
+
+intervalLiteral::= BASIC_STRING
+
+measureColumn::=
+    expression 'AS' 'ALIAS'
+
+
+selectStatement::= select | selectWithoutFrom
+select::=
+    'SELECT' [ 'ALL' | 'DISTINCT' ]
+    { ANY | projectItem ( COMMA projectItem)*[COMMA ANY] }
+    'FROM' tableExpression
+    [ 'WHERE' booleanExpression ]
+    [ 'GROUP BY' { groupItem [COMMA groupItem ]ANY } ]
+    [ 'HAVING' booleanExpression ]
+    [ 'WINDOWS' 'FROM' 'AS' windowSpec [COMMA BASIC_STRING AS windowSpec ]ANY ]
+    SEMI_COLON
+
+projectItem::=
+    BASIC_STRING [ 'AS' BASIC_STRING ]
+  | BASIC_STRING 'PERIOD' ANY
+
+selectWithoutFrom::=
+    'SELECT' [ 'ALL' | 'DISTINCT' ]
+    { '*' | projectItem [COMMA projectItem ] '*' }
+    [SEMI_COLON]
+
+query2::=
+    values
+  | {
+        select
+      | selectWithoutFrom
+      | 'UNION' [ 'ALL' ] query2
+      | 'EXPECT`' query2
+      | 'INTERSECT' query2
+    }
+    [ 'ORDER BY' orderItem [COMMA orderItem ]ANY ]
+    [ 'LIMIT' { 'COUNT' | 'ALL' } ]
+    [ 'OFFSET START' { 'ROW' | 'ROWS' } ]
+    [ 'FETCH' { 'FIRST' | 'NEXT' } [ 'COUNt' ] { 'ROW' | 'ROWS' } 'ONLY']
+    [SEMI_COLON]
+  | ε
+
+queryStatement ::= query
+query::=
+    values
+  | {
+        select
+      | selectWithoutFrom
+      | query2 'UNION' [ 'ALL' ] query2
+      | query2 'EXPECT' query2
+      | query2 'INTERSECT' query2
+    }
+    [ 'ORDER BY' orderItem [COMMA orderItem ]ANY ]
+    [ 'LIMIT' { 'COUNT' | 'ALL' } ]
+    [ 'OFFSET START' { 'ROW' | 'ROWS' } ]
+    [ 'FETCH' { 'FIRST' | 'NEXT' } [ 'COUNT' ] { 'ROW' | 'ROWS' } 'ONLY']
+    [SEMI_COLON]
+
+withItem::=
+    BASIC_STRING
+    [ ( 'COLUMN' [COMMA 'COLUMN' ]ANY ) ]
+    'AS' ( query )
+
+
+joinCondition::=
+    'NATURAL' booleanExpression
+  | 'USING' '(' column [COMMA column ]ANY ')'
+
+
+tableExpression2::=
+    tableReference [COMMA tableReference ]ANY
+  | [ 'NATURAL' ] [ 'LEFT' | 'RIGHT' | 'FULL' ] 'JOIN' tableExpression2 [ joinCondition ]
+  | BASIC_STRING
+  | ε
+
+tableExpression::=
+   tableName
+   |tableReference [COMMA tableReference ]ANY
+   | tableExpression2 [ 'NATURAL' ] [ 'LEFT' | 'RIGHT' | 'FULL' ]
+    'JOIN'
+    tableExpression2 [ joinCondition ]
+   | BASIC_STRING
+
+column ::= BASIC_STRING
+
+matchRecognize::=
+    'MATCH_RECOGNIZE' '('
+    [ 'PARTITION BY' expression [COMMA expression ]ANY ]
+    [ 'ORDER BY' orderItem [COMMA orderItem ]ANY ]
+    [ 'MEASURES' measureColumn [COMMA measureColumn ]ANY ]
+    [ 'ONE' 'ROW' 'PER' 'MATCH' ]
+    [ 'AFTER' 'MATCH'
+      ( 'SKIP' 'TO' 'NEXT' 'ROW'
+      | 'SKIP' 'PAST' 'LAST' 'ROW'
+      | 'SKIP' 'TO' 'FIRST' 'VARIABLE'
+      | 'SKIP' 'TO' 'LAST' 'VARIABLE'
+      | 'SKIP' 'TO' 'VARIABLE' )
+    ]
+    'PATTERN' '(' pattern ')'
+    [ 'WITHIN' intervalLiteral ]
+    'DEFINE' 'VARIABLE' 'AS' 'CONDITION' [COMMA 'VARIABLE' 'AS' 'CONDITION' ]ANY
+    ')'
+
+
+tableReference::=
+    tablePrimary
+    [ matchRecognize ]
+    [ [ 'AS' ] 'ALIAS' [ '(' BASIC_STRING [COMMA BASIC_STRING ]ANY ')' ] ]
+
+tablePrimary::=
+  |  [ 'TABLE' ] tablePath [ dynamicTableOptions ] [systemTimePeriod] [['AS'] BASIC_STRING]
+  | 'LATERAL' 'TABLE' '(' BASIC_STRING '(' expression [COMMA expression ]ANY ')' ')'
+  | [ 'LATERAL' ] '(' query ')'
+  | 'UNNSET' '(' expression ')'
+
+tablePath::=
+    [ [ BASIC_STRING PERIOD ] BASIC_STRING PERIOD ] BASIC_STRING
+
+dateTimeExpression ::= BASIC_STRING
+
+systemTimePeriod::=
+    'FOR' 'SYSTEM TIME' 'AS' 'OF' dateTimeExpression
+
+values::=
+    'VALUES' expression [COMMA expression ]ANY
+
+groupItem::=
+    expression
+  | '(' ')'
+  | '(' expression [COMMA expression ]ANY ')'
+  | 'CUBE' '(' expression [COMMA expression ]ANY ')'
+  | 'ROLLUP' '(' expression [COMMA expression ]ANY ')'
+  | 'GROUPING SETS' '(' groupItem [COMMA groupItem ]ANY ')'
+
+windowRef::=
+    BASIC_STRING
+  | windowSpec
+
+numericOrIntervalExpression ::= BASIC_STRING
+numericExpression ::= BASIC_STRING
+
+
+windowSpec::=
+    [ BASIC_STRING ]
+    (
+    [ 'ORDER BY' orderItem [COMMA orderItem ]ANY ]
+    [ 'PARTITION BY' expression [COMMA expression ]ANY ]
+    [
+        'RANGE' numericOrIntervalExpression {'PRECEDING'}
+      | 'ROWS' numericExpression {'PRECEDING'}
+    ]
+    )
+
+ projectItem ( COMMA projectItem)*[COMMA ANY]
+
+   { ANY | projectItem ( COMMA projectItem)*[COMMA ANY] }
+
+createStatement ::= createTable
+createTable ::= 'CREATE TABLE' [IF NOT EXSIT] [catalogName PERIOD][dbName PERIOD] tableName
+                LEFT_BRACKET
+                  oneTableField(COMMA oneTableField)*
+                  ['COMMENT' commentContent]
+                  ['PARTITIONED BY' (columnName[COMMA])*]
+                 RIGHT_BRACKET
+                 withStr
+                 '('
+                     (SINGLE_QUOTATION key SINGLE_QUOTATION EQUALS SINGLE_QUOTATION val SINGLE_QUOTATION[COMMA])*
+                  [ 'LIKE' sourceTable [( likeOptions )] | 'AS' query ]
+                ')' SEMI_COLON
+
+
+withStr ::= 'WITH'
+catalogName ::= BASIC_STRING
+dbName ::= BASIC_STRING
+tableName ::= ( HYPHEN | UNDERSCORE | BASIC_STRING)*
+oneTableField ::=  [ physicalColumnDefinition | metadataColumnDefinition | computedColumnDefinition  ]
+                   [ watermarkDefinition ]
+                   [ tableConstraint ]
+columnName ::= ( HYPHEN | UNDERSCORE | BASIC_STRING)*
+commentContent ::= (SINGLE_QUOTATION(COLON | HYPHEN | UNDERSCORE | BASIC_STRING)SINGLE_QUOTATION)*
+
+physicalColumnDefinition::=
+                  ['`']columnName['`'] columnType [columnConstraint] ['COMMENT' commentContent]
+
+columnConstraint::= ['CONSTRAINTS' columnName] ['PRIMARY KEY'] ['NOT'] ['ENFORCED']
+
+tableConstraint::= ['CONSTRAINTS' columnName] 'PRIMARY KEY' (columnName[COMMA])* 'NOT' 'ENFORCED'
+
+//TODO cannot match metadata field
+metadataColumnDefinition::=
+            ['`']columnName['`'] columnType 'METADATA'
+            ['FROM' SINGLE_QUOTATION metadataKey SINGLE_QUOTATION ]
+            [ 'VIRTUAL' ]
+
+computedColumnDefinition ::= ['`']columnName['`'] 'AS' computedColumnExpression [COMMENT BASIC_STRING]
+watermarkDefinition ::= 'WATERMARK' 'FOR' BASIC_STRING 'AS' watermarkStrategyExpression
+
+sourceTable::=[BASIC_STRING COMMA][BASIC_STRING COMMA]BASIC_STRING
+likeOptions::={
+                   { 'INCLUDING' | 'EXCLUDING' } { 'ALL' | 'CONSTRAINTS' | 'PARTITIONS' }
+                 | { 'INCLUDING' | 'EXCLUDING' | 'OVERWRITING' } { 'GENERATED' | 'OPTIONS' | 'WATERMARKS' }
+                }*
+
+computedColumnExpression ::= BASIC_STRING
+watermarkStrategyExpression ::= BASIC_STRING
+// TODO  BASIC_STRING should be member
+columnType ::= FLINK_SQL_TYPE [LEFT_BRACKET BASIC_STRING RIGHT_BRACKET]
+metadataKey ::= BASIC_STRING
+
+jarCommand ::=  addJar | showJar | removeJar
+pathToFileName ::= (BASIC_STRING| COLON | HYPHEN | '/' | UNDERSCORE )*
+addJar ::= 'ADD' 'JAR' SINGLE_QUOTATION pathToFileName PERIOD 'jar' SINGLE_QUOTATION SEMI_COLON
+showJar ::= 'SHOW' 'JARS' SEMI_COLON
+removeJar ::= 'REMOVE' 'JAR' SINGLE_QUOTATION pathToFileName PERIOD 'jar' SINGLE_QUOTATION SEMI_COLON
+
+insertStatement ::=   insertFromSelectQueries | insertValuesIntoTables | insertIntoMultipleTables
+// todo example not pass
+insertFromSelectQueries ::= 'INSERT' { 'INTO' | 'OVERWRITE' }
+                                [catalogName PERIOD][dbName PERIOD]tableName
+                                ['PARTITION' partSpec] [columnList]
+                                selectStatement SEMI_COLON
+
+partSpec ::= LEFT_BRACKET key '=' [SINGLE_QUOTATION]val[SINGLE_QUOTATION]
+              (COMMA key '=' [SINGLE_QUOTATION]val[SINGLE_QUOTATION] )*
+            RIGHT_BRACKET
+columnList ::= BASIC_STRING
+
+// todo example : INSERT INTO students VALUES ('fred flintstone', 35, 1.28), ('barney rubble', 32, 2.32); not pass
+insertValuesIntoTables ::= 'INSERT' { 'INTO' | 'OVERWRITE' }
+                                [catalogName PERIOD][dbName PERIOD]tableName
+                                'VALUES' valuesRow
+                                (COMMA valuesRow)* SEMI_COLON
+
+valuesRow ::= LEFT_BRACKET [SINGLE_QUOTATION]BASIC_STRING[SINGLE_QUOTATION]
+                   [COMMA BASIC_STRING] RIGHT_BRACKET
+
+insertIntoMultipleTables ::= 'EXECUTE' 'STATEMENT' 'SET' 'BEGIN' innerInsertStatement SEMI_COLON
+                                (innerInsertStatement SEMI_COLON)*  'END' SEMI_COLON
+
+innerInsertStatement ::=  insertFromSelectQueries | insertValuesIntoTables
